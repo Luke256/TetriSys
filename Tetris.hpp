@@ -297,6 +297,7 @@ class Tetris {
     bool m_is_btb;
     int32 m_score;
     Font m_score_font;
+    bool m_gameover;
     void m_generate_next();
     int32 m_update_mino();
     bool m_is_intersect();
@@ -307,8 +308,10 @@ public:
     Tetris();
     void update();
     void draw();
+    void reset();
     int32 get_score();
     bool is_btb();
+    bool is_gameover();
 };
 
 };

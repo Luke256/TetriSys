@@ -60,7 +60,8 @@ Tetris::Tetris():
     m_last_tspin(0),
     m_is_btb(false),
     m_score(0),
-    m_score_font(32)
+    m_score_font(32),
+    m_gameover(false)
 {
     m_generate_next();
     
@@ -70,10 +71,12 @@ Tetris::Tetris():
 }
 
 void Tetris::update() {
-    if(m_next.size() < 7) {
-        m_generate_next();
+    if(not m_gameover){
+        if(m_next.size() < 7) {
+            m_generate_next();
+        }
+        FMT_MAYBE_UNUSED int32 result = m_update_mino();
     }
-    FMT_MAYBE_UNUSED int32 result = m_update_mino();
 }
 
 void Tetris::m_generate_next() {
@@ -408,6 +411,27 @@ int32 Tetris::get_score() {
 
 bool Tetris::is_btb() {
     return m_is_btb;
+}
+
+bool Tetris::is_gameover() {
+    return m_gameover;
+}
+
+bool Tetris::reset() {
+    m_state.fill(0);
+    m_level = 1;
+    m_hold = 0;
+    m_last_tspin = 0;
+    m_is_btb = 0;
+    m_score = 0;
+    m_gameover = false;
+    m_next.clear();
+    
+    m_generate_next();
+        
+    TetriMino next_mino(m_next.front());
+    m_mino = next_mino;
+    m_next.pop_front();
 }
 
 };
