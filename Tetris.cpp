@@ -90,11 +90,13 @@ void Tetris::m_generate_next() {
 int32 Tetris::m_update_mino() {
     double speed = 1 / pow(0.8-((m_level-1)*0.007), m_level-1); // block / second
     if(KeyDown.pressed()) speed *= 20;
+    int32 prev_y = m_mino.m_Pos.y;
     m_mino.m_Pos.y += speed * Scene::DeltaTime();
     if(m_is_intersect()) {
         --m_mino.m_Pos.y;
         m_mino.m_Pos.y = floor(m_mino.m_Pos.y);
     }
+    if(KeyDown.pressed()) m_score += floor(m_mino.m_Pos.y) - prev_y;
     
     // move right and left
     if(KeyRight.down() or (m_auto_repeat.isOne() and KeyRight.pressed())) {
@@ -108,7 +110,7 @@ int32 Tetris::m_update_mino() {
     
     m_auto_repeat.update((KeyLeft|KeyRight).pressed());
     
-    if((KeyShift | KeyC).down()) {
+    if(KeyC.down()) {
         if(m_hold == 0) {
             m_hold = m_mino.m_type;
             TetriMino next_mino(m_next.front());
@@ -127,7 +129,13 @@ int32 Tetris::m_update_mino() {
     
     // ハードドロップ
     if(KeySpace.down()) {
-        while(not m_is_onground()) ++m_mino.m_Pos.y;
+        int32 fall_count = 0;
+        while(not m_is_onground()) {
+            ++m_mino.m_Pos.y;
+            ++fall_count;
+        }
+        
+        m_score += 2 * fall_count;
         
         m_settle(); // 設置 + 次のミノ
         return 0;
@@ -211,7 +219,6 @@ int32 Tetris::m_update_mino() {
     }
     if(tspin_type) {
         m_last_tspin = tspin_type;
-        Console << U"t-spin";
     }
     
     
@@ -225,8 +232,9 @@ int32 Tetris::m_update_mino() {
         m_settle(); // 設置 + 次のミノ
         
         // ゲームオーバー判定
-        if(m_is_intersect()) return -1;
-        else return 0;
+        if(m_is_intersect()) {
+            m_gameover = true;
+        }
     }
     
     return 0;
@@ -260,13 +268,19 @@ bool Tetris::m_is_onground() {
 
 void Tetris::m_settle() {
     // 設置
+    bool is_gameover = true;
     for(auto i : step(4)) {
         for(auto j : step(4)) {
             int32 ti = i + (int32)m_mino.m_Pos.y;
             int32 tj = j + (int32)m_mino.m_Pos.x;
             if (m_mino.body()[i][j] <= 0) continue;
+            if(ti >= 20) is_gameover = false;
             m_state[ti][tj] = m_mino.body()[i][j];
         }
+    }
+    
+    if(is_gameover) {
+        m_gameover = true;
     }
     
     int32 erase_count = m_erase();
@@ -279,16 +293,13 @@ void Tetris::m_settle() {
     }
     if(m_last_tspin == 1) { // Mini T-spin
         step_score += 100 + 100 * erase_count;
-        Console << U"Mini T-spin";
     }
     if(m_last_tspin == 2) { // T-spin
         int32 t = 400 + 400 * erase_count;
-        Console << U"T-spin";
         if(m_is_btb) t *= 1.5;
         step_score += t;
     }
     if(erase_count == 4) { // Tetris
-        Console << U"Tetris";
         int32 t = 800;
         if(m_is_btb) t *= 1.5;
         step_score += t;
@@ -413,11 +424,11 @@ bool Tetris::is_btb() {
     return m_is_btb;
 }
 
-bool Tetris::is_gameover() {
+bool Tetris::gameover() {
     return m_gameover;
 }
 
-bool Tetris::reset() {
+void Tetris::reset() {
     m_state.fill(0);
     m_level = 1;
     m_hold = 0;

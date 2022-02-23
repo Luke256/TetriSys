@@ -311,7 +311,7 @@ public:
     void reset();
     int32 get_score();
     bool is_btb();
-    bool is_gameover();
+    bool gameover();
 };
 
 };
