@@ -299,6 +299,8 @@ class Tetris {
     bool m_is_btb;
     int32 m_score;
     Font m_score_font;
+    int32 m_ren_count;
+    int32 m_ren_max;
     bool m_gameover;
     void m_generate_next();
     int32 m_update_mino(int32 action, UseKeyBoard keybord);
@@ -330,6 +332,8 @@ public:
     int32 get_score();
     bool is_btb();
     bool gameover();
+    int32 ren_now();
+    int32 ren_max();
 };
 
 };

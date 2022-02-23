@@ -61,7 +61,9 @@ Tetris::Tetris():
     m_is_btb(false),
     m_score(0),
     m_score_font(32),
-    m_gameover(false)
+    m_gameover(false),
+    m_ren_count(0),
+    m_ren_max(0)
 {
     m_generate_next();
     
@@ -321,6 +323,13 @@ void Tetris::m_settle() {
     if(erase_count > 0) {
         if(erase_count < 4 and m_last_tspin == 0) m_is_btb = false;
         else m_is_btb = true;
+        ++m_ren_count;
+        if (m_ren_max < m_ren_count) {
+            m_ren_max = m_ren_count;
+        }
+    }
+    else {
+        m_ren_count = 0;
     }
     
     m_score += step_score;
@@ -450,12 +459,22 @@ void Tetris::reset() {
     m_score = 0;
     m_gameover = false;
     m_next.clear();
+    m_ren_count = 0;
+    m_ren_max = 0;
     
     m_generate_next();
         
     TetriMino next_mino(m_next.front());
     m_mino = next_mino;
     m_next.pop_front();
+}
+
+int32 Tetris::ren_now() {
+    return m_ren_count;
+}
+
+int32 Tetris::ren_max() {
+    return m_ren_max;
 }
 
 };
