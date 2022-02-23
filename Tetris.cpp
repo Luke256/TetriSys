@@ -71,11 +71,16 @@ Tetris::Tetris():
 }
 
 void Tetris::update() {
+    update(0, UseKeyBoard::Yes);
+}
+
+
+void Tetris::update(int32 action, UseKeyBoard keybord){
     if(not m_gameover){
         if(m_next.size() < 7) {
             m_generate_next();
         }
-        FMT_MAYBE_UNUSED int32 result = m_update_mino();
+        FMT_MAYBE_UNUSED int32 result = m_update_mino(action, keybord);
     }
 }
 
@@ -87,30 +92,38 @@ void Tetris::m_generate_next() {
     }
 }
 
-int32 Tetris::m_update_mino() {
+int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
+    const double MoveRight = action == 1 or (keybord and ( KeyRight.down() or (m_auto_repeat.isOne() and KeyRight.pressed()) ));
+    const double MoveLeft = action == 2 or (keybord and ( KeyLeft.down() or (m_auto_repeat.isOne() and KeyLeft.pressed()) ));
+    const double SoftDrop = action == 3 or (keybord and ( KeyDown.pressed() ));
+    const double HardDrop = action == 4 or (keybord and ( KeySpace.down() ));
+    const double RotateClock = action == 5 or (keybord and ( (KeyUp | KeyX).down() ));
+    const double RotateCntClock = action == 6 or (keybord and ( (KeyZ | KeyControl).down() ));
+    const double Hold = action == 7 or ( keybord and ( KeyC.down() ));
+    
     double speed = 1 / pow(0.8-((m_level-1)*0.007), m_level-1); // block / second
-    if(KeyDown.pressed()) speed *= 20;
+    if(SoftDrop) speed *= 20;
     int32 prev_y = m_mino.m_Pos.y;
     m_mino.m_Pos.y += speed * Scene::DeltaTime();
     if(m_is_intersect()) {
         --m_mino.m_Pos.y;
         m_mino.m_Pos.y = floor(m_mino.m_Pos.y);
     }
-    if(KeyDown.pressed()) m_score += floor(m_mino.m_Pos.y) - prev_y;
+    if(SoftDrop) m_score += floor(m_mino.m_Pos.y) - prev_y;
     
     // move right and left
-    if(KeyRight.down() or (m_auto_repeat.isOne() and KeyRight.pressed())) {
+    if(MoveRight) {
         m_mino.m_Pos.x += 1;
         if(m_is_intersect()) m_mino.m_Pos.x -= 1;
     }
-    if(KeyLeft.down() or (m_auto_repeat.isOne() and KeyLeft.pressed())) {
+    if(MoveLeft) {
         m_mino.m_Pos.x -= 1;
         if(m_is_intersect()) m_mino.m_Pos.x += 1;
     }
     
     m_auto_repeat.update((KeyLeft|KeyRight).pressed());
     
-    if(KeyC.down()) {
+    if(Hold) {
         if(m_hold == 0) {
             m_hold = m_mino.m_type;
             TetriMino next_mino(m_next.front());
@@ -128,7 +141,7 @@ int32 Tetris::m_update_mino() {
     }
     
     // ハードドロップ
-    if(KeySpace.down()) {
+    if(HardDrop) {
         int32 fall_count = 0;
         while(not m_is_onground()) {
             ++m_mino.m_Pos.y;
@@ -143,7 +156,7 @@ int32 Tetris::m_update_mino() {
     
     int32 rotate_point = 0;
     // clockwise
-    if((KeyUp | KeyX).down()) {
+    if(RotateClock) {
         Vec2 base = m_mino.m_Pos;
         int32 prev_face = m_mino.m_face;
         m_mino.clockwise();
@@ -168,7 +181,7 @@ int32 Tetris::m_update_mino() {
             }
         }
     }
-    if((KeyZ | KeyControl).down()) {
+    if(RotateCntClock) {
         Vec2 base = m_mino.m_Pos;
         int32 prev_face = m_mino.m_face;
         m_mino.count_clockwise();
@@ -212,7 +225,7 @@ int32 Tetris::m_update_mino() {
             }
         }
     }
-    if((KeyUp|KeyZ|KeyX|KeyControl).down()) {
+    if(RotateClock or RotateCntClock) {
         Console << count;
         if(count > 4) tspin_type = 2; // T-spin
         if(count == 4 and rotate_point == 5) tspin_type = 1; // Mini T-spin
@@ -223,7 +236,7 @@ int32 Tetris::m_update_mino() {
     
     
     m_mino.m_lockdown.update(m_is_onground());
-    if((KeyControl | KeyZ | KeyX | KeyRight | KeyLeft | KeyUp).pressed()) {
+    if(MoveRight or MoveLeft or RotateClock or RotateCntClock) {
         m_mino.m_lockdown = Transition(0.5s, 0.001s);
     }
     

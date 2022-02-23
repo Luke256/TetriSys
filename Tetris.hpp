@@ -4,6 +4,8 @@
 
 namespace TetriSys {
 
+using UseKeyBoard = YesNo<struct UseKeyBoard_tag>;
+
 struct TetriMino {
     const Grid<Grid<int32>>SHAPE = {
         { // O
@@ -299,14 +301,30 @@ class Tetris {
     Font m_score_font;
     bool m_gameover;
     void m_generate_next();
-    int32 m_update_mino();
+    int32 m_update_mino(int32 action, UseKeyBoard keybord);
     bool m_is_intersect();
     bool m_is_onground();
     void m_settle();
     int32 m_erase();
 public:
+    ///@brief コンストラクタ
     Tetris();
+    
+    ///@brief 更新させる関数
     void update();
+    
+    ///@brief 詳細にオプションを指定して更新\n
+    /// 0:何もしない\n
+    /// 1:右に移動\n
+    /// 2:左に移動\n
+    /// 3:ソフトドロップ\n
+    /// 4:ハードドロップ\n
+    /// 5:右回転\n
+    /// 6:左回転\n
+    /// 7:ホールド 
+    ///@param action 行動
+    ///@param keybord キーボード入力を受け取るか
+    void update(int32 action, UseKeyBoard keybord);
     void draw();
     void reset();
     int32 get_score();
