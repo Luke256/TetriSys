@@ -289,7 +289,8 @@ class Tetris {
         }
     };
     
-    Transition m_auto_repeat;
+    Transition m_auto_repeat_r;
+    Transition m_auto_repeat_l;
     Grid<int32>m_state;
     TetriMino m_mino;
     Array<int32>m_next;
@@ -334,6 +335,7 @@ public:
     bool gameover();
     int32 ren_now();
     int32 ren_max();
+    Grid<int32>get_state();
 };
 
 };

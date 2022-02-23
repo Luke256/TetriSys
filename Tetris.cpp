@@ -52,7 +52,8 @@ void TetriMino::count_clockwise() {
 
 // Tetris
 Tetris::Tetris():
-    m_auto_repeat(0.2s, 0.001s),
+    m_auto_repeat_r(0.2s, 0.001s),
+    m_auto_repeat_l(0.2s, 0.001s),
     m_state(10, 40),
     m_mino(),
     m_level(1),
@@ -95,8 +96,8 @@ void Tetris::m_generate_next() {
 }
 
 int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
-    const double MoveRight = action == 1 or (keybord and ( KeyRight.down() or (m_auto_repeat.isOne() and KeyRight.pressed()) ));
-    const double MoveLeft = action == 2 or (keybord and ( KeyLeft.down() or (m_auto_repeat.isOne() and KeyLeft.pressed()) ));
+    const double MoveRight = action == 1 or (keybord and ( KeyRight.down() or (m_auto_repeat_r.isOne() and KeyRight.pressed()) ));
+    const double MoveLeft = action == 2 or (keybord and ( KeyLeft.down() or (m_auto_repeat_l.isOne() and KeyLeft.pressed()) ));
     const double SoftDrop = action == 3 or (keybord and ( KeyDown.pressed() ));
     const double HardDrop = action == 4 or (keybord and ( KeySpace.down() ));
     const double RotateClock = action == 5 or (keybord and ( (KeyUp | KeyX).down() ));
@@ -123,7 +124,8 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
         if(m_is_intersect()) m_mino.m_Pos.x += 1;
     }
     
-    m_auto_repeat.update((KeyLeft|KeyRight).pressed());
+    m_auto_repeat_r.update(KeyRight.pressed());
+    m_auto_repeat_l.update(KeyLeft.pressed());
     
     if(Hold) {
         if(m_hold == 0) {
@@ -381,24 +383,8 @@ void Tetris::draw() {
     };
     const Vec2 Pos(200, 100);
     const int32 size = 20;
-
-    for(auto i : step(20)) {
-        for(auto j : step(10)) {
-            Rect(Pos.x + size * j, Pos.y + size * i, size).draw(cols[m_state[i+20][j]]).drawFrame(1,0,Palette::White.withAlpha(80));
-        }
-    }
-    Rect(Pos.x, Pos.y, size * 10, size * 20).drawFrame(0, 3, Palette::White);
     
-    // 操作ミノ
-    for(auto i : step(4)) {
-        for(auto j : step(4)) {
-            int32 ti = i + (int32)m_mino.m_Pos.y-20;
-            int32 tj = j + (int32)m_mino.m_Pos.x;
-            if (m_mino.body()[i][j] <= 0) continue;
-            Rect(Pos.x + size * tj, Pos.y + size * ti, size).draw(cols[m_mino.body()[i][j]]);
-        }
-    }
-    
+    // ゴースト
     TetriMino ghost = m_mino;
     while(not m_is_onground()) ++m_mino.m_Pos.y;
     auto t = ghost;
@@ -410,9 +396,27 @@ void Tetris::draw() {
             int32 ti = i + (int32)ghost.m_Pos.y-20;
             int32 tj = j + (int32)ghost.m_Pos.x;
             if (ghost.body()[i][j] <= 0) continue;
-            Rect(Pos.x + size * tj, Pos.y + size * ti, size).draw(cols[ghost.body()[i][j]].withAlpha(100));
+            Rect(Pos.x + size * tj, Pos.y + size * ti, size).draw(Color(255, 100));
         }
     }
+    
+    // 操作ミノ
+    for(auto i : step(4)) {
+        for(auto j : step(4)) {
+            int32 ti = i + (int32)m_mino.m_Pos.y-20;
+            int32 tj = j + (int32)m_mino.m_Pos.x;
+            if (m_mino.body()[i][j] <= 0) continue;
+            Rect(Pos.x + size * tj, Pos.y + size * ti, size).draw(cols[m_mino.body()[i][j]]);
+        }
+    }
+
+    // 盤面
+    for(auto i : step(20)) {
+        for(auto j : step(10)) {
+            Rect(Pos.x + size * j, Pos.y + size * i, size).draw(cols[m_state[i+20][j]]).drawFrame(1,0,Palette::White.withAlpha(80));
+        }
+    }
+    Rect(Pos.x, Pos.y, size * 10, size * 20).drawFrame(0, 3, Palette::White);
     
     // Hold
     if(m_hold != 0) {
@@ -475,6 +479,10 @@ int32 Tetris::ren_now() {
 
 int32 Tetris::ren_max() {
     return m_ren_max;
+}
+
+Grid<int32>Tetris::get_state() {
+    return m_state;
 }
 
 };

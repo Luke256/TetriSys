@@ -11,7 +11,7 @@ OpenSiv3D(v0.6.2)
 ## コード例
 
 ```C++:main.cpp
-# include <Siv3D.hpp> // OpenSiv3D v0.6.2
+# include <Siv3D.hpp> // OpenSiv3D v0.6.1
 # include "Tetris.hpp"
 
 void Main()
@@ -22,6 +22,7 @@ void Main()
 	{
         tetris.update();
         tetris.draw();
+        if(tetris.gameover()) tetris.reset();
 	}
 }
 ```
