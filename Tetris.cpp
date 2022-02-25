@@ -70,10 +70,31 @@ Tetris::Tetris():
     m_score_font(32),
     m_ren_count(0),
     m_gameover(false),
-    m_ren_max(0)
+    m_ren_max(0),
+    m_holded(false)
 {
     m_generate_next();
     
+    TetriMino next_mino(m_next.front());
+    m_mino = next_mino;
+    m_next.pop_front();
+}
+
+void Tetris::reset() {
+    m_state.fill(0);
+    m_level = 1;
+    m_hold = 0;
+    m_last_tspin = 0;
+    m_is_btb = 0;
+    m_score = 0;
+    m_gameover = false;
+    m_next.clear();
+    m_ren_count = 0;
+    m_ren_max = 0;
+    m_holded = false;
+    
+    m_generate_next();
+        
     TetriMino next_mino(m_next.front());
     m_mino = next_mino;
     m_next.pop_front();
@@ -122,13 +143,10 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
     if(SoftDrop) m_score += floor(m_mino.m_Pos.y) - prev_y;
     
     
-    Print << m_mino.m_max_depth << U" "  << floor(m_mino.m_Pos.y);
     if(m_mino.m_max_depth < floor(m_mino.m_Pos.y)) {
         m_mino.m_max_depth = floor(m_mino.m_Pos.y);
         m_mino.m_rotate_cnt = 0;
-        Print << U"Yey!";
     }
-//    Print << m_mino.m_max_depth << U" "  << floor(m_mino.m_Pos.y);
     
     bool Moved = false;
     // move right and left
@@ -146,7 +164,7 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
     m_auto_repeat_r.update(KeyRight.pressed());
     m_auto_repeat_l.update(KeyLeft.pressed());
     
-    if(Hold) {
+    if(Hold and not m_holded) {
         if(m_hold == 0) {
             m_hold = m_mino.m_type;
             TetriMino next_mino(m_next.front());
@@ -160,6 +178,7 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
             m_mino = next_mino;
         }
         m_last_tspin = 0;
+        m_holded = true;
         return 0;
     }
     
@@ -176,7 +195,6 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
         m_settle(); // 設置 + 次のミノ
         return 0;
     }
-//    Print << m_mino.m_max_depth << U" "  << floor(m_mino.m_Pos.y);
     
     int32 rotate_point = 0;
     // clockwise
@@ -231,7 +249,6 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
             }
         }
     }
-//    Print << m_mino.m_max_depth << U" "  << floor(m_mino.m_Pos.y);
     
     // T-spin判定
     int32 count = 0;
@@ -258,7 +275,6 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
         m_last_tspin = tspin_type;
     }
     
-//    Print << m_mino.m_max_depth << U" "  << floor(m_mino.m_Pos.y);
     
     m_mino.m_lockdown.update(m_is_onground());
     if(Moved or RotateClock or RotateCntClock) {
@@ -266,7 +282,6 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
         m_mino.m_lockdown = Transition(0.5s, 0.001s);
     }
     
-    Print << m_mino.m_rotate_cnt;
     // 落ちる
     if(m_mino.m_lockdown.isOne() or (m_mino.m_rotate_cnt >= 15 and m_is_onground())) {
         m_settle(); // 設置 + 次のミノ
@@ -276,7 +291,6 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
             m_gameover = true;
         }
     }
-    Print << m_mino.m_max_depth << U" "  << floor(m_mino.m_Pos.y);
     
     return 0;
 }
@@ -360,6 +374,7 @@ void Tetris::m_settle() {
     
     m_score += step_score;
     m_last_tspin = 0;
+    m_holded = false;
     
     TetriMino next_mino(m_next.front());
     m_mino = next_mino;
@@ -447,7 +462,7 @@ void Tetris::draw() {
         for(auto i : step(4)) {
             for(auto j : step(4)) {
                 if (SHAPE[m_hold-1][i][j] <= 0) continue;
-                Rect(Pos.x + size * j - size * 5, Pos.y + size * i, size).draw(cols[SHAPE[m_hold-1][i][j]]);
+                Rect(Pos.x + size * j - size * 5, Pos.y + size * i, size).draw(m_holded ? Palette::Gray :  cols[SHAPE[m_hold-1][i][j]]);
             }
         }
     }
@@ -478,25 +493,6 @@ bool Tetris::gameover() {
     return m_gameover;
 }
 
-void Tetris::reset() {
-    m_state.fill(0);
-    m_level = 1;
-    m_hold = 0;
-    m_last_tspin = 0;
-    m_is_btb = 0;
-    m_score = 0;
-    m_gameover = false;
-    m_next.clear();
-    m_ren_count = 0;
-    m_ren_max = 0;
-    
-    m_generate_next();
-        
-    TetriMino next_mino(m_next.front());
-    m_mino = next_mino;
-    m_next.pop_front();
-}
-
 int32 Tetris::ren_now() {
     return m_ren_count;
 }
@@ -508,13 +504,12 @@ int32 Tetris::ren_max() {
 Grid<int32>Tetris::get_state() {
     auto res = m_state;
 
-//    // 操作ミノ
+    // 操作ミノを反映
     for(auto i : step(4)) {
         for(auto j : step(4)) {
             int32 ti = i + (int32)m_mino.m_Pos.y;
             int32 tj = j + (int32)m_mino.m_Pos.x;
             if (m_mino.body()[i][j] <= 0) continue;
-//            Console << res[ti][tj];
             res[ti][tj] = m_mino.body()[i][j];
         }
     }

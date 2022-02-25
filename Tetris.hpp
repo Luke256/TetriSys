@@ -305,6 +305,7 @@ class Tetris {
     int32 m_ren_count;
     int32 m_ren_max;
     bool m_gameover;
+    bool m_holded;
     void m_generate_next();
     int32 m_update_mino(int32 action, UseKeyBoard keybord);
     bool m_is_intersect();
