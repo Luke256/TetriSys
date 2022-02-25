@@ -203,6 +203,8 @@ struct TetriMino {
     int32 m_face;
     Transition m_lockdown;
     Vec2 m_Pos;
+    int32 m_rotate_cnt;
+    int32 m_max_depth;
     
     TetriMino();
     TetriMino(int32 type);
@@ -324,7 +326,8 @@ public:
     /// 4:ハードドロップ\n
     /// 5:右回転\n
     /// 6:左回転\n
-    /// 7:ホールド 
+    /// 7:ホールド
+    /// 8:ひとつ下に下げる(探索用)
     ///@param action 行動
     ///@param keybord キーボード入力を受け取るか
     void update(int32 action, UseKeyBoard keybord);

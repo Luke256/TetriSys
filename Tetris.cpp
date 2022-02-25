@@ -14,7 +14,9 @@ TetriMino::TetriMino():
     m_type(0),
     m_face(0),
     m_lockdown(0.5s, 0.001s),
-    m_Pos(3, 18)
+    m_Pos(3, 18),
+    m_rotate_cnt(0),
+    m_max_depth(-10)
 {
     
 }
@@ -23,7 +25,9 @@ TetriMino::TetriMino(int32 type):
     m_type(type),
     m_face(0),
     m_lockdown(0.5s, 0.001s),
-    m_Pos(3, 18)
+    m_Pos(3, 18),
+    m_rotate_cnt(0),
+    m_max_depth(-10)
 {
     
 }
@@ -37,6 +41,8 @@ TetriMino& TetriMino::operator=(TetriMino &x) {
     m_face = x.m_face;
     m_type = x.m_type;
     m_lockdown = x.m_lockdown;
+    m_rotate_cnt = x.m_rotate_cnt;
+    m_max_depth = x.m_max_depth;
     return *this;
 }
 
@@ -62,8 +68,8 @@ Tetris::Tetris():
     m_is_btb(false),
     m_score(0),
     m_score_font(32),
-    m_gameover(false),
     m_ren_count(0),
+    m_gameover(false),
     m_ren_max(0)
 {
     m_generate_next();
@@ -108,20 +114,33 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
     if(SoftDrop) speed *= 20;
     int32 prev_y = m_mino.m_Pos.y;
     m_mino.m_Pos.y += speed * Scene::DeltaTime();
+    if(action == 8 and prev_y == m_mino.m_Pos.y) ++m_mino.m_Pos.y;
     if(m_is_intersect()) {
         --m_mino.m_Pos.y;
         m_mino.m_Pos.y = floor(m_mino.m_Pos.y);
     }
     if(SoftDrop) m_score += floor(m_mino.m_Pos.y) - prev_y;
     
+    
+    Print << m_mino.m_max_depth << U" "  << floor(m_mino.m_Pos.y);
+    if(m_mino.m_max_depth < floor(m_mino.m_Pos.y)) {
+        m_mino.m_max_depth = floor(m_mino.m_Pos.y);
+        m_mino.m_rotate_cnt = 0;
+        Print << U"Yey!";
+    }
+//    Print << m_mino.m_max_depth << U" "  << floor(m_mino.m_Pos.y);
+    
+    bool Moved = false;
     // move right and left
     if(MoveRight) {
         m_mino.m_Pos.x += 1;
         if(m_is_intersect()) m_mino.m_Pos.x -= 1;
+        else Moved = true;
     }
     if(MoveLeft) {
         m_mino.m_Pos.x -= 1;
         if(m_is_intersect()) m_mino.m_Pos.x += 1;
+        else Moved = true;
     }
     
     m_auto_repeat_r.update(KeyRight.pressed());
@@ -157,6 +176,7 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
         m_settle(); // 設置 + 次のミノ
         return 0;
     }
+//    Print << m_mino.m_max_depth << U" "  << floor(m_mino.m_Pos.y);
     
     int32 rotate_point = 0;
     // clockwise
@@ -211,6 +231,7 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
             }
         }
     }
+//    Print << m_mino.m_max_depth << U" "  << floor(m_mino.m_Pos.y);
     
     // T-spin判定
     int32 count = 0;
@@ -230,7 +251,6 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
         }
     }
     if(RotateClock or RotateCntClock) {
-        Console << count;
         if(count > 4) tspin_type = 2; // T-spin
         if(count == 4 and rotate_point == 5) tspin_type = 1; // Mini T-spin
     }
@@ -238,14 +258,17 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
         m_last_tspin = tspin_type;
     }
     
+//    Print << m_mino.m_max_depth << U" "  << floor(m_mino.m_Pos.y);
     
     m_mino.m_lockdown.update(m_is_onground());
-    if(MoveRight or MoveLeft or RotateClock or RotateCntClock) {
+    if(Moved or RotateClock or RotateCntClock) {
+        ++m_mino.m_rotate_cnt;
         m_mino.m_lockdown = Transition(0.5s, 0.001s);
     }
     
+    Print << m_mino.m_rotate_cnt;
     // 落ちる
-    if(m_mino.m_lockdown.isOne()) {
+    if(m_mino.m_lockdown.isOne() or (m_mino.m_rotate_cnt >= 15 and m_is_onground())) {
         m_settle(); // 設置 + 次のミノ
         
         // ゲームオーバー判定
@@ -253,6 +276,7 @@ int32 Tetris::m_update_mino(int32 action, UseKeyBoard keybord) {
             m_gameover = true;
         }
     }
+    Print << m_mino.m_max_depth << U" "  << floor(m_mino.m_Pos.y);
     
     return 0;
 }
@@ -482,7 +506,19 @@ int32 Tetris::ren_max() {
 }
 
 Grid<int32>Tetris::get_state() {
-    return m_state;
+    auto res = m_state;
+
+//    // 操作ミノ
+    for(auto i : step(4)) {
+        for(auto j : step(4)) {
+            int32 ti = i + (int32)m_mino.m_Pos.y;
+            int32 tj = j + (int32)m_mino.m_Pos.x;
+            if (m_mino.body()[i][j] <= 0) continue;
+//            Console << res[ti][tj];
+            res[ti][tj] = m_mino.body()[i][j];
+        }
+    }
+    return res;
 }
 
 };
