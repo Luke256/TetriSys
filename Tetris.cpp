@@ -107,7 +107,7 @@ void Tetris::update() {
 
 void Tetris::update(int32 action, UseKeyBoard keybord){
     if(not m_gameover){
-        if(m_next.size() < 7) {
+        if(m_next.size() < 10) {
             m_generate_next();
         }
         FMT_MAYBE_UNUSED int32 result = m_update_mino(action, keybord);
